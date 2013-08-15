@@ -117,7 +117,46 @@ that is specialized for the `string` class of arguments).
 As for code organization, I use the following directory structure
 of the typical project:
 
-## Self-test
+
+    /project-root
+     |----src
+     |   `----module
+     |         `-----file.lisp
+     `----test
+          |----some-general-tests.lisp
+          `----module
+               `-----file-test.lisp
+
+I also, usually, place the tests in the same package as the code they test.
+
+[ASDF][asdf] provides a way to define the standard  for testing a system
+that can be invoked with `asdf:test-system`.
+The easiest way to hook into this facility is to define the following method
+for `asdf:test-op` somewhere either in `package.lisp` or in some common file in
+the `test` module (in the example above: `some-general-tests.lisp`):
+
+    (defmethod asdf:perform ((o asdf:test-op)
+                             (s (eql (asdf:find-system <your-system>))))
+      (asdf:load-system <your-system>)
+      (test :package <your-package>))
+      t)
+
+
+## Quickstart
+
+As the project just got started it's not in [quicklisp][ql].
+So to add it as an ASDF-dependency you have manually download/clone the project.
+The other option is to just take the file `src/should-test.lisp`
+and drop it into your project. It's designed to be self-contained:
+it contains the package definition
+and implements the core features of the framework.
+
+### Requirements
+
+- [RUTILS](http://github.com/vseloved/rutils) (available through [quicklisp][ql])
+
+
+## Self-testing
 
 There's a minimal test suite defined in `src/self-test.lisp`.
 The test suite is also hooked to `asdf:test-op` for the `should-test` system.
