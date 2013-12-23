@@ -120,7 +120,7 @@ of the typical project:
 
     /project-root
      |----src
-     |   `----module
+     |    `----module
      |         `-----file.lisp
      `----test
           |----some-general-tests.lisp

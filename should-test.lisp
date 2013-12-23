@@ -46,16 +46,23 @@
                               ,@(mapcar (lambda (assertion)
                                           `(handler-case
                                                (multiple-value-list ,assertion)
-                                             (error (,e) (list ,e))))
+                                             (error (,e)
+                                               (pair ,e (last1 ',assertion)))))
                                         body)))
                       (,failed (remove-if-not #'null ,rez :key #'car))
                       (,erred (remove-if #`(member % '(nil t)) ,rez :key #'car)))
                  (if (or ,failed ,erred)
                      (progn
+                       (when (and *verbose* ,erred)
+                         (dolist (,e ,erred)
+                           (format *test-output*
+                                   "~&~A FAIL~%error: ~A~%"
+                                   (should-format (lt ,e))
+                                   (should-format (rt ,e)))))
                        (format *test-output* "  FAILED~%")
                        (values nil
                                ,failed
-                               ,erred))
+                               (mapcar #'rt ,erred)))
                      (progn
                        (format *test-output* "  OK~%")
                        t))))))))
@@ -159,4 +166,7 @@
   (:method ((obj hash-table))
     (with-output-to-string (out) (print-ht obj out)))
   (:method ((obj list))
-    (mapcar #'should-format obj)))
+    (if (listp (cdr obj))
+        (mapcar #'should-format obj)
+        (fmt "(~A . ~A)"
+             (should-format (car obj)) (should-format (cdr obj))))))
