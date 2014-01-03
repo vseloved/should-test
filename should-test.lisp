@@ -3,13 +3,14 @@
 
 (cl:defpackage #:should-test
   (:nicknames #:st)
-  (:use #:common-lisp #:rutil)
+  (:use #:common-lisp #:rutilsx)
   (:export #:deftest
            #:should
            #:should-check
            #:should-format
            #:should-test-error
            #:test
+           #:undeftest
 
            #:*test-output*
            #:*verbose*))
@@ -26,15 +27,16 @@
 (define-condition should-test-error (simple-error) ())
 
 
-(defmacro deftest (name () &body body)
+(defmacro deftest (name (&rest vars) &body body)
   "Define a NAMEd test which is a function
-   that treats each form in its body as an assertion to be checked
+   that treats each form in its BODY as an assertion to be checked
    and prints some information to the output.
    The result of this function is a boolean indicating
    if any of the assertions has failed.
    In case of failure second value is a list of failure descriptions,
    returned from assertions,
-   and the third value is a list of uncaught errors if any"
+   and the third value is a list of uncaught errors if any.
+   If VARS are provided they are treated as let bindings around the body."
   (with-gensyms (rez failed erred e)
     `(progn
        (when (get ',name 'test)
@@ -42,7 +44,8 @@
        (setf (get ',name 'test)
              (lambda ()
                (format *test-output* "Test ~A: " ',name)
-               (let* ((,rez (list
+               (let* (,@vars
+                      (,rez (list
                               ,@(mapcar (lambda (assertion)
                                           `(handler-case
                                                (multiple-value-list ,assertion)
@@ -67,27 +70,41 @@
                        (format *test-output* "  OK~%")
                        t))))))))
 
-(defun test (&key (package *package*) test)
+(defun undeftest (name)
+  "Remove test from symbol NAME."
+  (when (get name 'test)
+    (not (void (get name 'test)))))
+
+
+(defun test (&key (package *package*) test failed)
   "Run a scpecific TEST or all tests defined in PACKAGE (defaults to current).
 
    Returns T if all tests pass or 3 values:
 
    - NIL
    - a hash-table of failed tests with their failed assertions' lists
-   - a hash-table of tests that have signalled uncaught errors with these errors"
+   - a hash-table of tests that have signalled uncaught errors with these errors
+
+   If FAILED is set reruns only tests failed at last run."
   (if test
       (if-it (get test 'test)
              (funcall it)
-             (error 'should-test-error "No test defined for ~A" test))
+             (error 'should-test-error
+                    :format-control (fmt "No test defined for ~A" test)))
       (let ((failures #{}) (errors #{}))
         (do-symbols (sym package)
-          (when-it (get sym 'test)
+          (when-it (and (or (not failed)
+                            (get sym 'test-failed))
+                        (get sym 'test))
             (mv-bind (success? failed erred) (funcall it)
-              (unless success?
-                (when failed
-                  (set# sym failures failed))
-                (when erred
-                  (set# sym errors erred))))))
+              (if success?
+                  (setf (get sym 'test-failed) nil)
+                  (progn
+                    (setf (get sym 'test-failed) t)
+                    (when failed
+                      (set# sym failures failed))
+                    (when erred
+                      (set# sym errors erred)))))))
         (or (zerop (+ (hash-table-count failures)
                       (hash-table-count errors)))
             (values nil
@@ -115,7 +132,9 @@
                (format *test-output*
                        "~&~A FAIL~%expect:~{ ~A~}~%actual:~{ ~A~}~%"
                        ',operation
-                       (mapcar #'should-format (list ,@expected))
+                       (if ',expected
+                           (mapcar #'should-format (list ,@expected))
+                           (list (should-format ',test)))
                        (mklist (should-format ,failed))))
              (values nil
                      (list ',operation ',expected ,failed)))))))
@@ -141,7 +160,7 @@
                        (values nil
                                nil))
     (condition (c)
-      (or (eql test (class-name (class-of c)))
+      (or (eql (mkeyw test) (mkeyw (class-name (class-of c))))
           (values nil
                   c)))))
 
@@ -166,7 +185,9 @@
   (:method ((obj hash-table))
     (with-output-to-string (out) (print-ht obj out)))
   (:method ((obj list))
-    (if (listp (cdr obj))
-        (mapcar #'should-format obj)
-        (fmt "(~A . ~A)"
-             (should-format (car obj)) (should-format (cdr obj))))))
+    (cond ((null obj)
+           (fmt "NIL"))
+          ((listp (cdr obj))
+           (mapcar #'should-format obj))
+          (t (fmt "(~A . ~A)"
+                  (should-format (car obj)) (should-format (cdr obj)))))))

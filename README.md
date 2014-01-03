@@ -4,14 +4,19 @@
 
 `SHOULD-TEST` is methodology-agnostic and non-opinionated,
 i.e. it doesn't care what kind of test approach you'd like to take
-(like, unit testing, random testing a la quickcheck or something else).
+(like unit testing, random testing a la quickcheck or something else).
 
-It cares about the things that a test framework should make easy:
+
+It's just built from first principles to facilitate the following activities:
 
 - defining and running arbitrary tests
 - analyzing the test output
 - piping the test output to upstream systems, like CI
   (by supporting common protocols, such as xUnit & TAP) - coming soon :)
+
+The library is at the rather early stages of its development,
+but it's actively used in the support of [RUTILS][rutils] and some
+of my in-house projects.
 
 ## Usage
 
@@ -69,6 +74,17 @@ so `(deftest some-fn ...` will do the following:
     (setf (get some-fn 'test)
           (lambda () ...))
 
+As every `should` clause should be a top-level form inside `deftest` it's
+not obvious how to bind some variables for several `should` clauses.
+To facilitate that `deftest` supports variable binding around the whole test body:
+
+    (deftest ((var (random 10)))
+      (should be eq var var)
+      (should be < 10 var))
+
+In this contrived example `var` is bound to the results of `(random 10)` as if by `let`,
+and is used inside two `should` forms.
+
 ### Running tests
 
 To run the tests use `test`. Without arguments it runs all the tests
@@ -99,7 +115,10 @@ So the structure of the summary, returned from `test`, will be the following:
       failed-test-2 ...
      }
 
-(`#{}` are `rutils` literal hash-table delimiters)
+(`#{}` are [RUTILS][rutils] literal hash-table delimiters)
+
+There's also `:failed` key to `test` that will re-test only tests
+which failed at their last run.
 
 ### Usage patterns
 
@@ -138,7 +157,7 @@ the `test` module (in the example above: `some-general-tests.lisp`):
     (defmethod asdf:perform ((o asdf:test-op)
                              (s (eql (asdf:find-system <your-system>))))
       (asdf:load-system <your-system>)
-      (test :package <your-package>))
+      (st:test :package <your-package>))
       t)
 
 
@@ -153,7 +172,7 @@ and implements the core features of the framework.
 
 ### Requirements
 
-- [RUTILS](http://github.com/vseloved/rutils) (available through [quicklisp][ql])
+- [RUTILS][rutils] (available through [quicklisp][ql])
 
 
 ## Self-testing
@@ -195,3 +214,4 @@ The test suite is also hooked to `asdf:test-op` for the `should-test` system.
 
   [ql]: http://quicklisp.org
   [asdf]: http://common-lisp.net/project/asdf
+  [rutils]: http://github.com/vseloved/rutils
