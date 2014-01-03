@@ -38,7 +38,7 @@
    and the third value is a list of uncaught errors if any.
    If VARS are provided they are treated as let bindings around the body."
   (with-gensyms (rez failed erred e)
-    (let ((wrap (getf config-and-vars :wrap))
+    (let ((wrap (mklist (getf config-and-vars :wrap)))
           (vars (loop :for tail :on config-and-vars
                    :if (eql (first tail) :wrap) :do (setf tail (rest tail))
                    :else :collect (first tail)))
