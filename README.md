@@ -85,6 +85,14 @@ To facilitate that `deftest` supports variable binding around the whole test bod
 In this contrived example `var` is bound to the results of `(random 10)` as if by `let`,
 and is used inside two `should` forms.
 
+Another option is the `:wrap` keyword that allows to wrap arbitrary
+code around the body of the test. It may be useful for some setup/teardown, like:
+
+    (deftest (:wrap (with-connection ()))
+      (should be true (ping))
+      (should be eql :bar (remote-get :foo)))
+
+
 ### Running tests
 
 To run the tests use `test`. Without arguments it runs all the tests

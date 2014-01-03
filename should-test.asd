@@ -2,7 +2,7 @@
 ;;;; (c) 2013 Vsevolod Dyomkin
 
 (asdf:defsystem #:should-test
-  :version "0.3.0" ;(:read-file-line "version.txt")
+  :version "0.3.1"
   :author "Vsevolod Dyomkin <vseloved@gmail.com>"
   :maintainer "Vsevolod Dyomkin <vseloved@gmail.com>"
   :licence "MIT"

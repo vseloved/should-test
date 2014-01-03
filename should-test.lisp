@@ -3,7 +3,7 @@
 
 (cl:defpackage #:should-test
   (:nicknames #:st)
-  (:use #:common-lisp #:rutilsx)
+  (:use #:common-lisp #:rutil)
   (:export #:deftest
            #:should
            #:should-check
@@ -27,7 +27,7 @@
 (define-condition should-test-error (simple-error) ())
 
 
-(defmacro deftest (name (&rest vars) &body body)
+(defmacro deftest (name (&rest config-and-vars) &body body)
   "Define a NAMEd test which is a function
    that treats each form in its BODY as an assertion to be checked
    and prints some information to the output.
@@ -38,37 +38,44 @@
    and the third value is a list of uncaught errors if any.
    If VARS are provided they are treated as let bindings around the body."
   (with-gensyms (rez failed erred e)
-    `(progn
-       (when (get ',name 'test)
-         (warn "Redefining test ~A" ',name))
-       (setf (get ',name 'test)
-             (lambda ()
-               (format *test-output* "Test ~A: " ',name)
-               (let* (,@vars
-                      (,rez (list
-                              ,@(mapcar (lambda (assertion)
-                                          `(handler-case
-                                               (multiple-value-list ,assertion)
-                                             (error (,e)
-                                               (pair ,e (last1 ',assertion)))))
-                                        body)))
-                      (,failed (remove-if-not #'null ,rez :key #'car))
-                      (,erred (remove-if #`(member % '(nil t)) ,rez :key #'car)))
-                 (if (or ,failed ,erred)
-                     (progn
-                       (when (and *verbose* ,erred)
-                         (dolist (,e ,erred)
-                           (format *test-output*
-                                   "~&~A FAIL~%error: ~A~%"
-                                   (should-format (lt ,e))
-                                   (should-format (rt ,e)))))
-                       (format *test-output* "  FAILED~%")
-                       (values nil
-                               ,failed
-                               (mapcar #'rt ,erred)))
-                     (progn
-                       (format *test-output* "  OK~%")
-                       t))))))))
+    (let ((wrap (getf config-and-vars :wrap))
+          (vars (loop :for tail :on config-and-vars
+                   :if (eql (first tail) :wrap) :do (setf tail (rest tail))
+                   :else :collect (first tail)))
+          (checks (when body
+                    `(list ,@(mapcar (lambda (assertion)
+                                       `(handler-case
+                                            (multiple-value-list ,assertion)
+                                          (error (,e)
+                                            (pair (last1 ',assertion) ,e))))
+                                     body)))))
+      `(progn
+         (when (get ',name 'test)
+           (warn "Redefining test ~A" ',name))
+         (setf (get ',name 'test)
+               (lambda ()
+                 (format *test-output* "Test ~A: " ',name)
+                 (let* (,@vars
+                        (,rez ,(if (and wrap checks)
+                                   (append wrap (list checks))
+                                   checks))
+                        (,failed (remove-if-not #'null ,rez :key #'car))
+                        (,erred (remove-if #`(member % '(nil t)) ,rez :key #'car)))
+                   (if (or ,failed ,erred)
+                       (progn
+                         (when (and *verbose* ,erred)
+                           (dolist (,e ,erred)
+                             (format *test-output*
+                                     "~&~A FAIL~%error: ~A~%"
+                                     (should-format (rt ,e))
+                                     (should-format (lt ,e)))))
+                         (format *test-output* "  FAILED~%")
+                         (values nil
+                                 ,failed
+                                 (mapcar #'lt ,erred)))
+                       (progn
+                         (format *test-output* "  OK~%")
+                         t)))))))))
 
 (defun undeftest (name)
   "Remove test from symbol NAME."

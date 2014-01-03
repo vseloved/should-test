@@ -14,7 +14,7 @@
 
 (deftest deftest ()
   (should be true
-          (progn (deftest foo (bar (baz 1)))
+          (progn (deftest foo (:wrap '(wrap) bar (baz 1)))
                  (get 'foo 'test))))
 
 (deftest undeftest ()
