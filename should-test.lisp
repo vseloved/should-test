@@ -7,8 +7,12 @@
   (:export #:deftest
            #:should
            #:should-check
+           #:should-checked
+           #:should-erred
+           #:should-failed
            #:should-format
            #:should-test-error
+           #:should-test-redefinition-warning
            #:test
            #:undeftest
 
@@ -25,9 +29,18 @@
 (defparameter *verbose* t)
 
 (define-condition should-test-error (simple-error) ())
+(define-condition should-checked ()
+  ((rez :initarg :rez :reader should-checked-rez)))
+(define-condition should-failed (should-checked) ())
+(define-condition should-erred (should-checked) ())
+
+(define-condition should-test-redefinition-warning (style-warning)
+  ((name :initarg :name))
+  (:report (lambda (c stream)
+             (format stream "Redefining test: ~A" (slot-value c 'name)))))
 
 
-(defmacro deftest (name (&rest config-and-vars) &body body)
+(defmacro deftest (name () &body body)
   "Define a NAMEd test which is a function
    that treats each form in its BODY as an assertion to be checked
    and prints some information to the output.
@@ -35,47 +48,28 @@
    if any of the assertions has failed.
    In case of failure second value is a list of failure descriptions,
    returned from assertions,
-   and the third value is a list of uncaught errors if any.
-   If VARS are provided they are treated as let bindings around the body."
-  (with-gensyms (rez failed erred e)
-    (let ((wrap (mklist (getf config-and-vars :wrap)))
-          (vars (loop :for tail :on config-and-vars
-                   :if (eql (first tail) :wrap) :do (setf tail (rest tail))
-                   :else :collect (first tail)))
-          (checks (when body
-                    `(list ,@(mapcar (lambda (assertion)
-                                       `(handler-case
-                                            (multiple-value-list ,assertion)
-                                          (error (,e)
-                                            (pair (last1 ',assertion) ,e))))
-                                     body)))))
-      `(progn
-         (when (get ',name 'test)
-           (warn "Redefining test ~A" ',name))
-         (setf (get ',name 'test)
-               (lambda ()
-                 (format *test-output* "Test ~A: " ',name)
-                 (let* (,@vars
-                        (,rez ,(if (and wrap checks)
-                                   (append wrap (list checks))
-                                   checks))
-                        (,failed (remove-if-not #'null ,rez :key #'car))
-                        (,erred (remove-if #`(member % '(nil t)) ,rez :key #'car)))
-                   (if (or ,failed ,erred)
-                       (progn
-                         (when (and *verbose* ,erred)
-                           (dolist (,e ,erred)
-                             (format *test-output*
-                                     "~&~A FAIL~%error: ~A~%"
-                                     (should-format (rt ,e))
-                                     (should-format (lt ,e)))))
-                         (format *test-output* "  FAILED~%")
-                         (values nil
-                                 ,failed
-                                 (mapcar #'lt ,erred)))
-                       (progn
-                         (format *test-output* "  OK~%")
-                         t)))))))))
+   and the third value is a list of uncaught errors if any."
+  (with-gensyms (failed erred e)
+    `(progn
+       (when (get ',name 'test)
+         (warn 'should-test-redefinition-warning :name ',name))
+       (setf (get ',name 'test)
+             (lambda ()
+               (format *test-output* "Test ~A: " ',name)
+               (let (,failed ,erred)
+                 (handler-bind
+                     ((should-failed #`(push (should-checked-rez %) ,failed))
+                      (should-erred  #`(push (should-checked-rez %) ,erred)))
+                   ,@body)
+                 (if (or ,failed ,erred)
+                     (progn
+                       (format *test-output* "  FAILED~%")
+                       (values nil
+                               ,failed
+                               ,erred))
+                     (progn
+                       (format *test-output* "  OK~%")
+                       t))))))))
 
 (defun undeftest (name)
   "Remove test from symbol NAME."
@@ -98,8 +92,9 @@
              (funcall it)
              (error 'should-test-error
                     :format-control (fmt "No test defined for ~A" test)))
-      (let ((failures #{}) (errors #{}))
-        (do-symbols (sym package)
+      (let ((failures (make-hash-table))
+            (errors (make-hash-table)))
+        (dolist (sym (package-internal-symbols package))
           (when-it (and (or (not failed)
                             (get sym 'test-failed))
                         (get sym 'test))
@@ -129,22 +124,33 @@
    (implemented by generic function SHOULD-CHECK methods).
    The simplest key is BE that just checks for equality.
    Another pre-defined key is SIGNAL, which intercepts conditions."
-  (with-gensyms (success? failed)
+  (with-gensyms (success? failed e)
     (mv-bind (expected operation) (butlast2 expected-and-testee)
-      `(mv-bind (,success? ,failed)
-           (should-check ,(mkeyw key) ',test
-                         (lambda () ,operation) ,@expected)
-         (or ,success?
-             (when *verbose*
-               (format *test-output*
-                       "~&~A FAIL~%expect:~{ ~A~}~%actual:~{ ~A~}~%"
-                       ',operation
-                       (if ',expected
-                           (mapcar #'should-format (list ,@expected))
-                           (list (should-format ',test)))
-                       (mklist (should-format ,failed))))
-             (values nil
-                     (list ',operation ',expected ,failed)))))))
+      `(handler-case
+           (mv-bind (,success? ,failed)
+               (should-check ,(mkeyw key) ',test
+                             (lambda () ,operation) ,@expected)
+             (or (when ,success?
+                   (signal 'should-checked)
+                   t)
+                 (when *verbose*
+                   (format *test-output*
+                           "~&~A FAIL~%expect:~{ ~A~}~%actual:~{ ~A~}~%"
+                           ',operation
+                           (if ',expected
+                               (mapcar #'should-format (list ,@expected))
+                               (list (should-format ',test)))
+                           (mklist (should-format ,failed))))
+                 (signal 'should-failed :rez ,failed)
+                 (values nil
+                         (list ',operation ',expected ,failed))))
+         (error (,e)
+           (when *verbose*
+             (format *test-output* "~&~A FAIL~%error: ~A~%"
+                     ',operation (should-format ,e)))
+           (signal 'should-erred :rez ,e))))))
+
+
 
 (defgeneric should-check (key test fn &rest expected)
   (:documentation

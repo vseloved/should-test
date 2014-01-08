@@ -28,28 +28,26 @@ Test are defined with `deftest`:
       (should be = 1 (some-fn 2))
       (should be = 2 (some-fn 1)))
 
-Each individual form in test's body is treated as an assertion
-that should be true. If it doesn't satisfy, it is expected
-that 2 values will be returned:
-
-- `NIL` to indicate that assertion has failed
-- a list of an expression being tested, expected and actual outputs
-
 Being run, `deftest` returns either `T` or `NIL` as primary value.
 Secondary and third values in case of `NIL` are lists of:
 
 - all failed assertions returned by individual assertions
 - and all uncaught errors signalled inside assertions
 
-`should` is a macro that takes care of checking assertions and following
-this protocol. Under the hood it calls the generic function `should-check`
+`should` is a macro that takes care of checking assertions.
+If the assertion doesn't hold, `should` signals a condition of types
+`should-failed` or `should-erred` which are aggregated by `deftest`.
+
+Also, `should` returns either `T` or
+`NIL` and a list of a failed expression with expected and actual outputs as values.
+
+Under the hood it calls the generic function `should-check`
 and passes it a keyword produced from the first symbol (in this case, `:be`),
 a test predicate (here, `'=`), and a tested expression as thunk
-(here it will be e.g. `(lambda () (some-fn 1))`), and expected results, if any.
+(here it will be e.g. `(lambda () (some-fn 1))`), and expected results if any.
 If multiple expected results are given, like in
 `(should be eql nil #{:failed 1} (some-other-fn :dummy))`,
 it means that multiple `values` are expected.
-
 As you see, the keyword and test predicate are passed unevaluated,
 so you can't use expressions here.
 
@@ -72,25 +70,7 @@ Tests are defined as lambda-functions attached to a symbol's `test` property,
 so `(deftest some-fn ...` will do the following:
 
     (setf (get some-fn 'test)
-          (lambda () ...))
-
-As every `should` clause should be a top-level form inside `deftest` it's
-not obvious how to bind some variables for several `should` clauses.
-To facilitate that `deftest` supports variable binding around the whole test body:
-
-    (deftest ((var (random 10)))
-      (should be eq var var)
-      (should be < 10 var))
-
-In this contrived example `var` is bound to the results of `(random 10)` as if by `let`,
-and is used inside two `should` forms.
-
-Another option is the `:wrap` keyword that allows to wrap arbitrary
-code around the body of the test. It may be useful for some setup/teardown, like:
-
-    (deftest (:wrap (with-connection ()))
-      (should be true (ping))
-      (should be eql :bar (remote-get :foo)))
+          (lambda () ...))If `should` assertion
 
 
 ### Running tests
@@ -109,7 +89,7 @@ and 2 hash-tables holding the same lists as above keyed by failed test's names.
 As you see, the system uses a somewhat recursive protocol for test results:
 
 - at the lowest level `should` returns `T` or `NIL`
-  and information about the failed assertion
+  and signals information about the failed assertion
 - this information is aggregated by `deftest` which will return
   aggregate information about all the failed assertions in the hash-table
 - at the highest level `test` will once again aggregate information

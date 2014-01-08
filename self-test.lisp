@@ -14,7 +14,7 @@
 
 (deftest deftest ()
   (should be true
-          (progn (deftest foo (:wrap '(wrap) bar (baz 1)))
+          (progn (deftest foo ())
                  (get 'foo 'test))))
 
 (deftest undeftest ()
@@ -36,14 +36,18 @@
                  (prog1 (test :test 'foo)
                    (undeftest 'foo))))
   (should be null
-          (progn (deftest foo ((bar t)) (should be true bar))
+          (progn (deftest foo ()
+                   (let ((bar t))
+                     (+ 1 2)
+                     (should be true bar)))
                  (prog1 (test :test 'foo)
                    (undeftest 'foo)))))
 
 (deftest should-be ()
   (let ((*test-output* (make-broadcast-stream)))
     (should be null
-            (should be eql nil t))))
+            (handler-case (should be eql nil t)
+              (should-checked () nil)))))
 
 (deftest should-signal ()
   (let ((*test-output* (make-broadcast-stream)))
@@ -57,4 +61,6 @@
 expect: "foo"
 actual: "bar"
 /#
-            (should print-to *standard-output* "foo" (princ "bar")))))
+    (handler-case
+        (should print-to *standard-output* "foo" (princ "bar"))
+      (should-checked () nil)))))
