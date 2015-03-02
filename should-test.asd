@@ -1,8 +1,8 @@
 ;;;; SHOULD-TEST system definition
-;;;; (c) 2013 Vsevolod Dyomkin
+;;;; (c) 2013-2015 Vsevolod Dyomkin
 
 (asdf:defsystem #:should-test
-  :version "0.4.0"
+  :version "0.4.1"
   :author "Vsevolod Dyomkin <vseloved@gmail.com>"
   :maintainer "Vsevolod Dyomkin <vseloved@gmail.com>"
   :licence "MIT"

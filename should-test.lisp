@@ -1,5 +1,5 @@
 ;;;;; SHOULD-TEST core: package definition and main functions
-;;;;; (c) 2013 Vsevolod Dyomkin
+;;;;; (c) 2013-2015 Vsevolod Dyomkin
 
 (cl:defpackage #:should-test
   (:nicknames #:st)
@@ -163,7 +163,9 @@
 
 (defmethod should-check ((key (eql :be)) test fn &rest expected)
   (let ((rez (multiple-value-list (funcall fn))))
-    (or (every test rez (mklist expected))
+    (or (if expected
+            (every test rez (mklist expected))
+            (every test rez))
         (values nil
                 rez))))
 
