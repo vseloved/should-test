@@ -72,7 +72,7 @@ Tests are defined as lambda-functions attached to a symbol's `test` property,
 so `(deftest some-fn ...` will do the following:
 
     (setf (get some-fn 'test)
-          (lambda () ...))If `should` assertion
+          (lambda () ...))
 
 
 ### Running tests
