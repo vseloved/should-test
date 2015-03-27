@@ -9,7 +9,7 @@
   (macrolet ((replace-all (text &rest from-to-pairs)
                (if (endp from-to-pairs)
                    text
-                   `(re:regex-replace-all
+                   `(ppcre:regex-replace-all
                      ,(caar from-to-pairs)
                      (replace-all ,text ,@(cdr from-to-pairs))
                      ,(cdar from-to-pairs)))))
