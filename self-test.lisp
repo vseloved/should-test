@@ -19,29 +19,35 @@
 
 (deftest undeftest ()
   (should be true
-          (progn (deftest foo ())
-                 (undeftest 'foo)))
+          (progn (deftest foo0 ())
+                 (undeftest 'foo0)))
   (should be null
-          (undeftest 'foo)))
+          (undeftest 'foo0)))
 
 (deftest test ()
   (should signal should-test-error
-          (test :test (gensym)))
+          (let ((*test-output* (make-broadcast-stream)))
+            (test :test (gensym))))
   (should be true
-          (test :test 'deftest))
+          (let ((*test-output* (make-broadcast-stream)))
+            (test :test 'deftest)))
   (should be true
           (test :package :cl))  ;; no tests defined for CL package
   (should be null
-          (progn (deftest foo () (should be null t))
-                 (prog1 (test :test 'foo)
-                   (undeftest 'foo))))
-  (should be null
-          (progn (deftest foo ()
-                   (let ((bar t))
-                     (+ 1 2)
-                     (should be true bar)))
-                 (prog1 (test :test 'foo)
-                   (undeftest 'foo)))))
+          (handler-case (unwind-protect
+                             (let ((*test-output* (make-broadcast-stream)))
+                               (deftest foo1 () (should be null t))
+                               (test :test 'foo1))
+                          (undeftest 'foo1))
+            (should-failed ())))
+  (should be true
+          (let ((*test-output* (make-broadcast-stream)))
+            (deftest foo2 ()
+              (let ((bar t))
+                (+ 1 2)
+                (should be true bar)))
+            (prog1 (test :test 'foo2)
+              (undeftest 'foo2)))))
 
 (deftest should-be ()
   (let ((*test-output* (make-broadcast-stream)))

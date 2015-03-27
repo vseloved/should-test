@@ -3,7 +3,7 @@
 
 (cl:defpackage #:should-test
   (:nicknames #:st)
-  (:use #:common-lisp #:rutil)
+  (:use #:common-lisp #:rutil #:local-time #:osicat)
   (:export #:deftest
            #:should
            #:should-check
@@ -17,7 +17,10 @@
            #:undeftest
 
            #:*test-output*
-           #:*verbose*))
+           #:*verbose*
+
+           #:*xml-output*
+           #:test-for-xunit))
 
 (in-package #:should-test)
 (named-readtables:in-readtable rutils-readtable)
@@ -49,7 +52,7 @@
    In case of failure second value is a list of failure descriptions,
    returned from assertions,
    and the third value is a list of uncaught errors if any."
-  (with-gensyms (failed erred e)
+  (with-gensyms (failed erred)
     `(progn
        (when (get ',name 'test)
          (warn 'should-test-redefinition-warning :name ',name))
