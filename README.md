@@ -14,11 +14,11 @@ It's just built from first principles to facilitate the following activities:
 - defining and running arbitrary tests
 - analyzing the test output
 - piping the test output to upstream systems, like CI
-  (by supporting common protocols, such as xUnit & TAP) - coming soon :)
+  (by supporting common protocols, such as xUnit - available,- and TAP - coming soon)
 
 The library is at the rather early stages of its development,
-but it's actively used in the support of [RUTILS][rutils] and some
-of my in-house projects.
+but it's actively used in the support of [RUTILS][rutils], [CL-REDIS][cl-redis],
+and some of my in-house projects.
 
 ## Usage
 
@@ -77,7 +77,7 @@ so `(deftest some-fn ...` will do the following:
 
 ### Running tests
 
-To run the tests use `test`. Without arguments it runs all the tests
+To run the tests, use `test`. Without arguments, it runs all the tests
 in the current package. Given a `:package` argument it will do the same
 for that package, and given a `:test` argument it will run that individual test.
 
@@ -136,7 +136,9 @@ of the typical project:
           `----module
                `-----file-test.lisp
 
-I also, usually, place the tests in the same package as the code they test.
+I also usually place the tests in the same package as the code they test
+but protect them with `#+dev` guard, so that in production environment
+they are not compiled and loaded altogether.
 
 [ASDF][asdf] provides a way to define the standard  for testing a system
 that can be invoked with `asdf:test-system`.
@@ -205,3 +207,4 @@ The test suite is also hooked to `asdf:test-op` for the `should-test` system.
   [ql]: http://quicklisp.org
   [asdf]: http://common-lisp.net/project/asdf
   [rutils]: http://github.com/vseloved/rutils
+  [cl-redis]: http://github.com/vseloved/cl-redis
