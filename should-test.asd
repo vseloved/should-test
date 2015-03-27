@@ -2,7 +2,7 @@
 ;;;; (c) 2013-2015 Vsevolod Dyomkin
 
 (asdf:defsystem #:should-test
-  :version "0.4.1"
+  :version "1.0.0"
   :author "Vsevolod Dyomkin <vseloved@gmail.com>"
   :maintainer "Vsevolod Dyomkin <vseloved@gmail.com>"
   :licence "MIT"
