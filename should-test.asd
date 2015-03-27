@@ -10,4 +10,5 @@
   :depends-on (#:rutilsx)
   :serial t
   :components ((:file "should-test")
-               (:file "self-test")))
+               (:file "self-test")
+               (:file "xunit")))
