@@ -175,7 +175,7 @@ The test suite is also hooked to `asdf:test-op` for the `should-test` system.
 
 ## License
 
- Copyright (c) 2013-2014 Vsevolod Dyomkin <vseloved@gmail.com>
+ Copyright (c) 2013-2015 Vsevolod Dyomkin <vseloved@gmail.com>
 
  Permission is hereby granted, free of charge, to any person
  obtaining a copy of this software and associated documentation
