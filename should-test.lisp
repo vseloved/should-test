@@ -167,7 +167,8 @@
 (defmethod should-check ((key (eql :be)) test fn &rest expected)
   (let ((rez (multiple-value-list (funcall fn))))
     (or (if expected
-            (every test rez (mklist expected))
+            (and (>= (length rez) (length expected))
+                 (every test rez (mklist expected)))
             (every test rez))
         (values nil
                 rez))))
