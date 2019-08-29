@@ -15,7 +15,11 @@
 (deftest deftest ()
   (should be true
           (progn (deftest foo ())
+                 (get 'foo 'test)))
+  (should be null
+          (progn (deftest foo ())
                  (get 'foo 'test))))
+
 
 (deftest undeftest ()
   (should be true
@@ -63,10 +67,10 @@
 (deftest should-print-to ()
   (let ((*verbose* t))
     (should print-to *test-output*
-            #/(PRINC bar) FAIL
-expect: "foo"
-actual: "bar"
-/#
+            "(PRINC bar) FAIL
+expect: \"foo\"
+actual: \"bar\"
+"
     (handler-case
         (should print-to *standard-output* "foo" (princ "bar"))
       (should-checked () nil)))))

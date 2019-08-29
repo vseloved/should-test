@@ -7,7 +7,7 @@
   :maintainer "Vsevolod Dyomkin <vseloved@gmail.com>"
   :licence "MIT"
   :description "Minimal yet feature-rich Common Lisp test framework."
-  :depends-on (#:rutilsx #:local-time #:osicat #:cl-ppcre)
+  :depends-on (#:rutils #:local-time #:osicat #:cl-ppcre)
   :serial t
   :components ((:file "should-test")
                (:file "self-test")

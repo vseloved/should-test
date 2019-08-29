@@ -1,9 +1,9 @@
 ;;;;; SHOULD-TEST core: package definition and main functions
-;;;;; (c) 2013-2015 Vsevolod Dyomkin
+;;;;; (c) 2013-2018 Vsevolod Dyomkin
 
 (cl:defpackage #:should-test
   (:nicknames #:st)
-  (:use #:common-lisp #:rutil #:local-time #:osicat)
+  (:use #:common-lisp #:rtl #:local-time)
   (:export #:deftest
            #:should
            #:should-check
@@ -200,7 +200,8 @@
   (:method :around (obj)
     (let ((*print-length* 3)) (call-next-method)))
   (:method (obj)
-    (fmt "~S" obj))
+    (handler-case (fmt "~S" obj)
+      (error () (fmt "~A" obj))))
   (:method ((obj hash-table))
     (with-output-to-string (out) (print-ht obj out)))
   (:method ((obj list))
